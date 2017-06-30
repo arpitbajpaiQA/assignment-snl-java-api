@@ -2,7 +2,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.UUID;
-
+import org.testng.Assert;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.testng.annotations.BeforeTest;
@@ -91,6 +91,48 @@ public class TestBoard {
 			throws FileNotFoundException, UnsupportedEncodingException, JSONException, InvalidTurnException {
 		b.rollDice(id);
 
+	}
+	@Test(expectedExceptions = GameInProgressException.class)
+	public void GameInProgressException_for_already_occuring_game()
+			throws MaxPlayersReachedExeption, FileNotFoundException, UnsupportedEncodingException,
+			PlayerExistsException, GameInProgressException, IOException, JSONException, InvalidTurnException {
+	 b.rollDice((UUID) ((JSONObject) b.getData().getJSONArray("players").get(0)).get("uuid"));
+		b.registerPlayer("Alfred");
+	}
+	@Test
+	public void rr_Check_where_the_player_has_to_move_to_on_running_rollDice()
+			throws JSONException, InvalidTurnException, PlayerExistsException, GameInProgressException,
+			MaxPlayersReachedExeption, IOException, NoUserWithSuchUUIDException {
+		b.deletePlayer((UUID) ((JSONObject) b.getData().getJSONArray("players").get(0)).get("uuid"));
+		b.registerPlayer("Alfred");
+		((JSONObject) b.getData().getJSONArray("players").get(0)).put("position", 0);
+		UUID uuid = (UUID) ((JSONObject) b.getData().getJSONArray("players").get(0)).get("uuid");
+		Object current_position = ((JSONObject) b.getData().getJSONArray("players").get(0)).get("position");
+		JSONObject obj = b.rollDice(uuid);
+		Object new_position = ((JSONObject) b.getData().getJSONArray("players").get(0)).get("position");
+		Object dice = obj.get("dice");
+		Object message = obj.get("message");
+		int number = (int) current_position + (int) dice;
+		JSONObject steps = null;
+		// dice roll
+		steps = (JSONObject) b.getData().getJSONArray("steps").get((int) number);
+		int type = (Integer) steps.get("type");
+		if (type == 2) {
+			Assert.assertNotEquals(message, "Player climbed a ladder, moved to " + new_position);
+		} else if (type == 0) {
+			Assert.assertEquals(message, "Player moved to " + new_position);
+		} else if (type == 1) {
+			Assert.assertNotEquals(message, "Player was bit by a snake, moved back to " + new_position);
+		}
+	}
+
+	/**
+	 * 
+	 */
+	@Test
+	public void re_Check_wether_toString_method_is_returning_accurate_value() {
+		String value = "UUID:" + b.getUuid().toString() + "\n" + b.getData().toString();
+		Assert.assertEquals(value, b.toString());
 	}
 
 }
